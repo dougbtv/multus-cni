@@ -25,6 +25,7 @@ import (
 	"io/ioutil"
 	"net"
 	"os"
+	"os/exec" // TEMPORARY.
 	"path/filepath"
 	"strings"
 
@@ -69,6 +70,26 @@ type K8sArgs struct {
 	K8S_POD_NAMESPACE          types.UnmarshallableString
 	K8S_POD_INFRA_CONTAINER_ID types.UnmarshallableString
 }
+
+// ------------------------- TEMPORARY REMOVE THESE LATER
+
+func logger(input string) {
+
+	// exec_command :=
+	// os.Stderr.WriteString("!trace alive The containerid: |" + exec_command + "|||\n")
+
+	// This is a total hack.
+	// cmd := exec.Command("/bin/bash", "-c", "echo \"ratchet-child: " + input + "\" | systemd-cat")
+
+	// This is even MORE of a hack.
+	cmd := exec.Command("/bin/bash", "-c", "echo \"multus-debug: "+input+"\" >> /tmp/multus-debug.log")
+	cmd.Start()
+
+}
+
+// ------------------------- end TEMPORARY REMOVE THESE LATER
+
+
 
 //taken from cni/plugins/meta/flannel/flannel.go
 func isString(i interface{}) bool {
@@ -288,7 +309,12 @@ func getPodNetworkAnnotation(client *kubernetes.Clientset, k8sArgs K8sArgs) (str
 		return annot, fmt.Errorf("getPodNetworkAnnotation: failed to query the pod %v in out of cluster comm", string(k8sArgs.K8S_POD_NAME))
 	}
 
-	return pod.Annotations["networks"], nil
+	logger("!bang getting Annotations.............")
+	logstr := fmt.Sprintf("%v",pod.Annotations)
+	logger(logstr)
+	logger(pod.Annotations["kubernetes.cni.cncf.io/networks"])
+
+	return pod.Annotations["kubernetes.cni.cncf.io/networks"], nil
 }
 
 func parsePodNetworkObject(podnetwork string) ([]map[string]interface{}, error) {
@@ -298,11 +324,38 @@ func parsePodNetworkObject(podnetwork string) ([]map[string]interface{}, error) 
 		return nil, fmt.Errorf("parsePodNetworkObject: pod annotation not having \"network\" as key, refer Multus README.md for the usage guide")
 	}
 
-	if err := json.Unmarshal([]byte(podnetwork), &podNet); err != nil {
-		return nil, fmt.Errorf("parsePodNetworkObject: failed to load pod network err: %v | pod network: %v", err, podnetwork)
+	logger("!bang podnetwork string is.............")
+	logger(podnetwork)
+
+	// Determine if the string is JSON format, or comma-delimited.
+	if (isJSON(podnetwork)) {
+		// Use the JSON as-is
+		logger("!bang This is JSON!")
+		if err := json.Unmarshal([]byte(podnetwork), &podNet); err != nil {
+			return nil, fmt.Errorf("parsePodNetworkObject: failed to load pod network err: %v | pod network: %v", err, podnetwork)
+		}
+	} else {
+		// Build a map from the comma delimited items.
+		logger("!bang This is COMMA-DELIMITED!")
+		commaItems := strings.Split(podnetwork, ",")
+		for i := range commaItems {
+			m := make(map[string]interface{})
+			m["name"] = commaItems[i]
+			podNet = append(podNet,m)
+		}
 	}
 
+
+	logger("!bang debug podNet.............")
+	logstr := fmt.Sprintf("%v",podNet)
+	logger(logstr)
+
 	return podNet, nil
+}
+
+func isJSON(str string) bool {
+    var js json.RawMessage
+    return json.Unmarshal([]byte(str), &js) == nil
 }
 
 func getpluginargs(name string, args string, primary bool) (string, error) {
