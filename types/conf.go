@@ -31,7 +31,7 @@ const (
 	defaultConfDir                = "/etc/cni/multus/net.d"
 	defaultBinDir                 = "/opt/cni/bin"
 	defaultReadinessIndicatorFile = ""
-	defaultMultusNamespace         = "kube-system"
+	defaultMultusNamespace        = "kube-system"
 )
 
 func LoadDelegateNetConfList(bytes []byte, delegateConf *DelegateNetConf) error {
@@ -54,7 +54,7 @@ func LoadDelegateNetConfList(bytes []byte, delegateConf *DelegateNetConf) error 
 // Convert raw CNI JSON into a DelegateNetConf structure
 func LoadDelegateNetConf(bytes []byte, net *NetworkSelectionElement, deviceID string) (*DelegateNetConf, error) {
 	var err error
-	logging.Debugf("LoadDelegateNetConf: %s, %v, %s", string(bytes), net, deviceID)
+	logging.Debugf("!trace0 -- LoadDelegateNetConf: %s, %v, %s", string(bytes), net, deviceID)
 
 	// If deviceID is present, inject this into delegate config
 	if deviceID != "" {

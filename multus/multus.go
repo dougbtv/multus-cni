@@ -386,21 +386,34 @@ func cmdGet(args *skel.CmdArgs, exec invoke.Exec, kubeClient k8s.KubeClient) (cn
 }
 
 func cmdDel(args *skel.CmdArgs, exec invoke.Exec, kubeClient k8s.KubeClient) error {
+	os.Stderr.WriteString("!trace cmdDel TRACE A stderr\n")
 	logging.Debugf("cmdDel: %v, %v, %v", args, exec, kubeClient)
 	in, err := types.LoadNetConf(args.StdinData)
+	logging.Debugf("!trace cmdDel: %v, %v, %v", args, exec, kubeClient)
+	os.Stderr.WriteString("!trace cmdDel TRACE B stderr\n")
 	if err != nil {
 		return err
 	}
 
+	logging.Debugf("!trace TRACE C")
+
 	if args.Netns == "" {
 		return nil
 	}
+
+	logging.Debugf("!trace TRACE D")
 	netns, err := ns.GetNS(args.Netns)
+	logging.Debugf("!trace TRACE E: netns %s", netns)
+	logging.Debugf("!trace TRACE E.1: err %s", err)
 	if err != nil {
+
+		logging.Debugf("!trace TRACE E.2: err %s", err)
 		//  if NetNs is passed down by the Cloud Orchestration Engine, or if it called multiple times
 		// so don't return an error if the device is already removed.
 		// https://github.com/kubernetes/kubernetes/issues/43014#issuecomment-287164444
-		_, ok := err.(ns.NSPathNotExistErr)
+		foo, ok := err.(ns.NSPathNotExistErr)
+		logging.Debugf("!trace TRACE E.3: foo %s", foo)
+		logging.Debugf("!trace TRACE E.4: ok %s", ok)
 		if ok {
 			return nil
 		}
@@ -408,6 +421,7 @@ func cmdDel(args *skel.CmdArgs, exec invoke.Exec, kubeClient k8s.KubeClient) err
 	}
 	defer netns.Close()
 
+	logging.Debugf("!trace TRACE F")
 	k8sArgs, err := k8s.GetK8sArgs(args)
 	if err != nil {
 		return logging.Errorf("Multus: Err in getting k8s args: %v", err)
@@ -417,6 +431,8 @@ func cmdDel(args *skel.CmdArgs, exec invoke.Exec, kubeClient k8s.KubeClient) err
 	if err != nil {
 		return err
 	}
+
+	logging.Debugf("!trace TRACE G")
 
 	if numK8sDelegates == 0 {
 		// re-read the scratch multus config if we have only Multus delegates
@@ -434,6 +450,8 @@ func cmdDel(args *skel.CmdArgs, exec invoke.Exec, kubeClient k8s.KubeClient) err
 		}
 	}
 
+	logging.Debugf("!trace TRACE H")
+
 	//unset the network status annotation in apiserver, only in case Multus as kubeconfig
 	if in.Kubeconfig != "" && kc != nil {
 		if !types.CheckSystemNamespaces(kc.Podnamespace, in.SystemNamespaces) {
@@ -444,7 +462,11 @@ func cmdDel(args *skel.CmdArgs, exec invoke.Exec, kubeClient k8s.KubeClient) err
 		}
 	}
 
+	logging.Debugf("!trace TRACE I")
+
 	rt := types.CreateCNIRuntimeConf(args, k8sArgs, "", in.RuntimeConfig)
+
+	logging.Debugf("!trace TRACE J")
 	return delPlugins(exec, args.IfName, in.Delegates, len(in.Delegates)-1, rt, in.BinDir)
 }
 
@@ -478,6 +500,8 @@ func main() {
 			}
 			return result.Print()
 		},
-		func(args *skel.CmdArgs) error { return cmdDel(args, nil, nil) },
+		func(args *skel.CmdArgs) error {
+			return cmdDel(args, nil, nil)
+		},
 		cniversion.All, "meta-plugin that delegates to other CNI plugins")
 }
