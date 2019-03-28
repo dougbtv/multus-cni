@@ -9,10 +9,10 @@ go:
 
 env:
   global:
-    - REGISTRY_USER=${REGISTRY_USER}
-    - REGISTRY_PASS=${REGISTRY_PASS}
     - MULTUS_GOPATH=${PWD}/gopath
     - secure: "${REGISTRY_SECURE}"
+    - secure: NJkYv9mO7RA06U4X0QgLpuJyTz+dt1x/vAkbjS8lRPJfjNuRW+zFAZS/p6fN/NOwOfxiEUN2AkCdzAM2HIxRs6062twYThoHbmtfoMSWEtCySoZOTPTHg8N2fVJT1b6C4KbEYbGKgjjM5jocoyEzqAN1hb24t8HYntI0gx0JuYg6cVlPa+z5/7wPNkmhnPLMEQjsKdbDWjc9Ol514KlE1jzOqu4GRIp94l6ah/V8OlNdUptDUa/N6Xtz3ewTtAzVrVpdGCSVAWQ3scXx3XCf0kdZmmNgCi1jYgdIkYoXMrmbBCWW5G5iEoOyiC1o20IQ7qXaw0Y/WR4K8iOpspn7xo9NFk5n7vzEewBUHkB/DPgvZo1w2XxS0qThk6qIEAwOAAAKw2zF5jLsHDKkxcu/7a2oQECwKVjkPmcZWMlEAcdJcQa4a6Tbm2hVV1w210uSxFYojPyM7I2hct/0vBtJwEQ0l0BuhYYzLVQ9G8lJhWO1Mp274De42ttCv2sy9kNotMzsfJXfQL0e0CnWN53FOUzZw7j3nT+CRiVYCOFNGkIhjP2USQRplz9Q6u85hAnxyTrqRVKb6qLetV47Zz16+AylQ8NoO5mJBf+HBTMV7pJeMcNSRyVeQ8oEXLbk2+8qwYBTJaSCsH3Le9vhlrYhUD7TnOkjm4YTdDX1yl0qIrA=
+    - secure: gA/Bux0ssgZ5ROjLqAgjZXhagPC7CJbwgRn9Hj9AdpgBASv0gCfttqQhIIw7dfNZ74dpdBSK9nJpLRZL4M+/aTtF6sPZgh5OvDA6rZLlB3O+zNsyEOgnE+1IhIGOD6zOHn+VAxpA28F2rp9BFuLT/O9mDwhs/T3afZH466FSteRS8xfF6gxJa+tCTxHKnZ0N5S0VaxlU5PxQs6vKnE4W9LTSXoEXMFBPLGbdRFv4h1VCN/pZnUgy7iVrRDyvPNPx/9Rb/XtxJ3xu1+YPKkVOdtaf+y5A/RJAo4nPF3QCSbpEvIWNUxSuETel4tPBFZu1/u1doc9otgLxfR8aA4IGLPxmoh0TnRhpV6LdLcEwFKZtISwXrSepNxnXT5QCumnluhoO2swJOYC4NxjNMV0F1h9Gge4fpTWWlkhpw1uAYrLeQKqO5sgcxNVVZTu4Agd3ZrX5lwDSLpVc9UHZ2+sufE05hhuag+QnuPOOUcRavyPHu5LO/YGzoKVXlcauiTxeXSaD2sKYczox0aFKXPVJAiZMIMMWYCnl3kjPqdcS6yzWvqXlTyh/des0NPbfSnsYj3soTqzSbhwsoIvbbSZ5eEY8P4BFUPXDu+tAVxze4I2NGjbOu3/izQEKo9SAKePzsuPNGbg2iXMUiRjTkti2owJxuDJZqRou6fUaDU7RDGE=
 
 before_install:
   - sudo apt-get update -qq
@@ -21,28 +21,28 @@ before_install:
 install:
   - go get -u golang.org/x/lint/golint
 
-before_script:
-  # Make gopath... to run golint/go fmt/go vet
-  - |-
-    if [ ! -h gopath/src/github.com/intel/multus-cni ]; then
-        mkdir -p gopath/src/github.com/intel
-        ln -s ../../../.. gopath/src/github.com/intel/multus-cni || exit 255
-    fi
-  - env GOPATH=${MULTUS_GOPATH} golint gopath/src/github.com/intel/multus-cni/multus/... | grep -v ALL_CAPS | xargs -r false
-  - env GOPATH=${MULTUS_GOPATH} go fmt gopath/src/github.com/intel/multus-cni/...
-  - go tool vet */*.go
-#  - gocyclo -over 15 ./multus
+# before_script:
+#   # Make gopath... to run golint/go fmt/go vet
+#   - |-
+#     if [ ! -h gopath/src/github.com/intel/multus-cni ]; then
+#         mkdir -p gopath/src/github.com/intel
+#         ln -s ../../../.. gopath/src/github.com/intel/multus-cni || exit 255
+#     fi
+#   - env GOPATH=${MULTUS_GOPATH} golint gopath/src/github.com/intel/multus-cni/multus/... | grep -v ALL_CAPS | xargs -r false
+#   - env GOPATH=${MULTUS_GOPATH} go fmt gopath/src/github.com/intel/multus-cni/...
+#   - go tool vet */*.go
+# #  - gocyclo -over 15 ./multus
 
 script:
-  - ./build
-  - sudo ./test.sh
-  - |-
-    GOV_GOPATH=${PWD}/gopath
-    pushd gopath/src/github.com/intel/multus-cni
-    env GOPATH=${GOV_GOPATH} ${GOPATH}/bin/goveralls -coverprofile=coverage.out -service=travis-ci
-    popd
-  - mkdir -p ${TRAVIS_BUILD_DIR}/dist
-  - tar cvfz ${TRAVIS_BUILD_DIR}/dist/multus-cni_amd64.tar.gz --warning=no-file-changed --exclude="dist" --exclude="vendor" .
+  # - ./build
+  # - sudo ./test.sh
+  # - |-
+  #   GOV_GOPATH=${PWD}/gopath
+  #   pushd gopath/src/github.com/intel/multus-cni
+  #   env GOPATH=${GOV_GOPATH} ${GOPATH}/bin/goveralls -coverprofile=coverage.out -service=travis-ci
+  #   popd
+  # - mkdir -p ${TRAVIS_BUILD_DIR}/dist
+  # - tar cvfz ${TRAVIS_BUILD_DIR}/dist/multus-cni_amd64.tar.gz --warning=no-file-changed --exclude="dist" --exclude="vendor" .
   - docker build -t nfvpe/multus .
 
 deploy:
@@ -73,13 +73,12 @@ deploy:
   # Push images to Dockerhub on merge to master
   - provider: script
     on:
-      branch: master
+      branch: kural-tp
     script: >
       bash -c '
-      docker tag nfvpe/multus nfvpe/multus:snapshot;
+      docker tag nfvpe/multus nfvpe/multus:v3.3-tp;
       docker login -u "$REGISTRY_USER" -p "$REGISTRY_PASS";
-      docker push nfvpe/multus:snapshot;
-      docker push nfvpe/multus:latest;
+      docker push nfvpe/multus:v3.3-tp;
       echo done'
 
 after_success:
