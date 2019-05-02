@@ -9,10 +9,7 @@ go:
 
 env:
   global:
-    - REGISTRY_USER=${REGISTRY_USER}
-    - REGISTRY_PASS=${REGISTRY_PASS}
-    - MULTUS_GOPATH=${PWD}/gopath
-    - secure: "${REGISTRY_SECURE}"
+    - secure: "oPmhMnnDWp41udz3sqpaCvr/+t6Og8lWKrUJVE3FY4STa6SKsWTXDaE+PwVMknxzjmKmOn5We8ULs95ZAMYisuF+mF6UYqJRgqxxTcAOEMlqD+Myb9y0vozSPB/cbxh1ABz5fRD2IP7m04lZpwY41+p6kbpYID1Ywax2VoveA73jzspn1gVCf7o2RBlEaAVXOERleyWWNo7+Ce1MKTNv/ziE2BhuCDdGzh8BvK1Av6U3j3M/KfdwtqyNhFOZho9uHAi3k8a2DPD1nUQito7YURa8+CgAlQ9t6EJve4cxubvQP3EPavslN/vgfTtU62NO5i0f7Mfn35LQBGglxmD3nX0+FdCvzU3gRtsLwRVCM1cWBRY7juCsULMbl+PufjTratCgEhbX9Xwo8uWQlgq9/JaUbK1O8vQ0OEpkJTMD/Cpz4Nc2CDlcoAk3wU2RkTEHo1oR94i6+N0PLNW/CsrbpG5LhaxcT53OERtcyDbh7ZQ0Ldq6LwR67Dfl2sE9ovgFAWPRPMZSQYq5lsudZdQoSP46kMR9UlXdY8Jnzk2ufZZtCHpD/f+AHOj441tz5PaA0emtEFXwFclspTKi+wXHyWmPykSfLEtmoj27uT4AuEMpiuz4oHpCwBtKMicDzCA/MowxpoG/Cnjgqslf0X3xNBm0VRFtIZQaPEPEjpojKFc="    - MULTUS_GOPATH=${PWD}/gopath
 
 before_install:
   - sudo apt-get update -qq
@@ -43,46 +40,16 @@ script:
     popd
   - mkdir -p ${TRAVIS_BUILD_DIR}/dist
   - tar cvfz ${TRAVIS_BUILD_DIR}/dist/multus-cni_amd64.tar.gz --warning=no-file-changed --exclude="dist" --exclude="vendor" .
-  - docker build -t nfvpe/multus .
+  - docker build -t dougbtv/multus-defaultnet .
 
 deploy:
-  # Release on versioned tag (e.g. v1.0)
-  - provider: script
-    skip_cleanup: true
-    script: curl -sL https://git.io/goreleaser | bash
-    on:
-      tags: true
-      all_branches: true
-      condition: "$TRAVIS_TAG =~ ^v[0-9].*$"
-  # Push images to Dockerhub on tag
-  - provider: script
-    script: >
-      bash -c '
-      docker tag nfvpe/multus nfvpe/multus:$TRAVIS_TAG;
-      docker login -u "$REGISTRY_USER" -p "$REGISTRY_PASS"; 
-      docker push nfvpe/multus; 
-      docker push nfvpe/multus:$TRAVIS_TAG;
-      echo foo'
-    on:
-      tags: true
-      all_branches: true
-      condition: "$TRAVIS_TAG =~ ^v[0-9].*$"
   # Push images to Dockerhub on merge to master
   - provider: script
     on:
-      branch: master
+      branch: default-per-namespace
     script: >
       bash -c '
-      docker tag nfvpe/multus nfvpe/multus:snapshot;
+      docker tag dougbtv/multus-defaultnet dougbtv/multus-defaultnet:snapshot;
       docker login -u "$REGISTRY_USER" -p "$REGISTRY_PASS";
-      docker push nfvpe/multus:snapshot; 
+      docker push dougbtv/multus-defaultnet:snapshot; 
       echo foo'
-
-after_success:
-  # put build tgz to bintray
-  - curl -T ${TRAVIS_BUILD_DIR}/dist/multus-cni_amd64.tar.gz -u${BINTRAY_USER}:${BINTRAY_APIKEY} https://api.bintray.com/content/redhat-nfvpe/multus-cni-crd-snapshots/snapshot/snapshot-${TRAVIS_COMMIT}/multus-cni_amd64-${TRAVIS_COMMIT}.tar.gz
-  # publish uploaded file
-  - curl -X POST -u${BINTRAY_USER}:${BINTRAY_APIKEY} https://api.bintray.com/content/redhat-nfvpe/multus-cni-crd-snapshots/snapshot/snapshot-${TRAVIS_COMMIT}/publish
-  # put it in bintray download list
-  - sleep 20
-  - "curl -X PUT -H 'Accept: application/json' -H 'Content-type: application/json' -u${BINTRAY_USER}:${BINTRAY_APIKEY} https://api.bintray.com/file_metadata/redhat-nfvpe/multus-cni-crd-snapshots/multus-cni_amd64-${TRAVIS_COMMIT}.tar.gz -d '{\"list_in_downloads\":true}'"
