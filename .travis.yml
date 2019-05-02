@@ -1,4 +1,5 @@
 language: go
+# check 1212
 # see https://docs.travis-ci.com/user/reference/overview/#Virtualization-environments
 # for the detail
 # sudo: requried
@@ -9,7 +10,8 @@ go:
 
 env:
   global:
-    - secure: "oPmhMnnDWp41udz3sqpaCvr/+t6Og8lWKrUJVE3FY4STa6SKsWTXDaE+PwVMknxzjmKmOn5We8ULs95ZAMYisuF+mF6UYqJRgqxxTcAOEMlqD+Myb9y0vozSPB/cbxh1ABz5fRD2IP7m04lZpwY41+p6kbpYID1Ywax2VoveA73jzspn1gVCf7o2RBlEaAVXOERleyWWNo7+Ce1MKTNv/ziE2BhuCDdGzh8BvK1Av6U3j3M/KfdwtqyNhFOZho9uHAi3k8a2DPD1nUQito7YURa8+CgAlQ9t6EJve4cxubvQP3EPavslN/vgfTtU62NO5i0f7Mfn35LQBGglxmD3nX0+FdCvzU3gRtsLwRVCM1cWBRY7juCsULMbl+PufjTratCgEhbX9Xwo8uWQlgq9/JaUbK1O8vQ0OEpkJTMD/Cpz4Nc2CDlcoAk3wU2RkTEHo1oR94i6+N0PLNW/CsrbpG5LhaxcT53OERtcyDbh7ZQ0Ldq6LwR67Dfl2sE9ovgFAWPRPMZSQYq5lsudZdQoSP46kMR9UlXdY8Jnzk2ufZZtCHpD/f+AHOj441tz5PaA0emtEFXwFclspTKi+wXHyWmPykSfLEtmoj27uT4AuEMpiuz4oHpCwBtKMicDzCA/MowxpoG/Cnjgqslf0X3xNBm0VRFtIZQaPEPEjpojKFc="    - MULTUS_GOPATH=${PWD}/gopath
+    - MULTUS_GOPATH=${PWD}/gopath
+    -   secure: "rino1hhWlxEO24xu/o8nyDm6/tHVN/MvyUhfWoCCGkQdtaLioCuIPw3SYowOCAC3Xbo0SDkWjRiK90aRllqrA4Ytu2kAJaqhbq1HFQnIISLF04tDnM4Je4cyk8+CHjgWhhX2a99cQfDeaPLfO01MAPVc+/pYnJ8T2RTF0j2Vofi229HhqegReCMtRmRIuWy8qPK2k0GhvGegSAaTwlbSZqoLbfBbq2tEbyFiA3k7pgMks1wZylxyNzgk5y7JCtNdUbNm7G0B7XLNgWbMwft/l9fm9/N7eLAfWK9z+/mA3van6OS7c9O72N2WcGg/MkGn6EkFr9VOaeLSZbxMwQeaRaCLKyl2e1j2FGx1f0xFAZQWzbXchW2Ea6QgZW4+2/4osTcgo+TOMv2WkJseJxyZ6xVwvCQaCMYS+EsPsnhcoURBFltkmnXN2NfXLGJDB+52GrWtCRQpUIbUwy1sdWbkrkrzmPq2rYNaWeVK+abHwRapBrJg0WOKJNl9WnFG/g8yJ/5MNzlD5MLVq8/sa7SvtvurT9kF1GFGutaJlH4ZDjXrogoy7Q4CEeFpYHK9J49a4MqKgfI0/Ykop8Jg0KJwN1yriKjS6huJQyYfT/PZM7alF6Kr5KoFw6d8Jkk4WGqpl+L64OX4aueSrBHBXdtAO3z3y4OcoWY05SNxySlJTYY="
 
 before_install:
   - sudo apt-get update -qq
@@ -52,4 +54,5 @@ deploy:
       docker tag dougbtv/multus-defaultnet dougbtv/multus-defaultnet:snapshot;
       docker login -u "$REGISTRY_USER" -p "$REGISTRY_PASS";
       docker push dougbtv/multus-defaultnet:snapshot; 
-      echo foo'
+      docker push dougbtv/multus-defaultnet:latest; 
+      echo done'
