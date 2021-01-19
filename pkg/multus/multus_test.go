@@ -34,11 +34,11 @@ import (
 	cniversion "github.com/containernetworking/cni/pkg/version"
 	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/containernetworking/plugins/pkg/testutils"
+	netfake "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/client/clientset/versioned/fake"
 	"gopkg.in/intel/multus-cni.v3/pkg/k8sclient"
 	"gopkg.in/intel/multus-cni.v3/pkg/logging"
 	testhelpers "gopkg.in/intel/multus-cni.v3/pkg/testing"
 	"gopkg.in/intel/multus-cni.v3/pkg/types"
-	netfake "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/client/clientset/versioned/fake"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
@@ -2748,6 +2748,268 @@ var _ = Describe("multus operations cniVersion 0.4.0 config", func() {
 		Expect(fExec.addIndex).To(Equal(len(fExec.plugins)))
 		// plugin 1 is the masterplugin
 		Expect(reflect.DeepEqual(result, expectedResult1)).To(BeTrue())
+	})
+
+	It("validates CNI plugin types", func() {
+		fakePod := testhelpers.NewFakePod("testpod", "net1,net2", "")
+		net1 := `{
+		"name": "net1",
+		"type": "/mynet",
+		"cniVersion": "0.4.0"
+	}`
+
+		args := &skel.CmdArgs{
+			ContainerID: "123456789",
+			Netns:       testNS.Path(),
+			IfName:      "eth0",
+			Args:        fmt.Sprintf("K8S_POD_NAME=%s;K8S_POD_NAMESPACE=%s", fakePod.ObjectMeta.Name, fakePod.ObjectMeta.Namespace),
+			StdinData: []byte(`{
+	    "name": "node-cni-network",
+	    "type": "multus",
+	    "kubeconfig": "/etc/kubernetes/node-kubeconfig.yaml",
+	    "delegates": [{
+	        "name": "weave1",
+	        "cniVersion": "0.4.0",
+	        "type": "weave-net"
+	    }]
+	}`),
+		}
+
+		fExec := &fakeExec{}
+		expectedResult1 := &current.Result{
+			CNIVersion: "0.4.0",
+			IPs: []*current.IPConfig{{
+				Address: *testhelpers.EnsureCIDR("1.1.1.2/24"),
+			},
+			},
+		}
+		expectedConf1 := `{
+	    "name": "weave1",
+	    "cniVersion": "0.4.0",
+	    "type": "weave-net"
+	}`
+		fExec.addPlugin(nil, "eth0", expectedConf1, expectedResult1, nil)
+		fExec.addPlugin(nil, "net1", net1, &current.Result{
+			CNIVersion: "0.4.0",
+			IPs: []*current.IPConfig{{
+				Address: *testhelpers.EnsureCIDR("1.1.1.3/24"),
+			},
+			},
+		}, nil)
+
+		clientInfo := NewFakeClientInfo()
+		_, err := clientInfo.Client.CoreV1().Pods(fakePod.ObjectMeta.Namespace).Create(
+			context.TODO(), fakePod, metav1.CreateOptions{})
+		Expect(err).NotTo(HaveOccurred())
+
+		_, err = clientInfo.AddNetAttachDef(
+			testhelpers.NewFakeNetAttachDef(fakePod.ObjectMeta.Namespace, "net1", net1))
+		Expect(err).NotTo(HaveOccurred())
+
+		os.Setenv("CNI_COMMAND", "ADD")
+		os.Setenv("CNI_IFNAME", "eth0")
+		_, err = CmdAdd(args, fExec, clientInfo)
+		Expect(err).To(HaveOccurred())
+
+	})
+
+	It("validates CNI IPAM plugin types", func() {
+		fakePod := testhelpers.NewFakePod("testpod", "net1,net2", "")
+		net1 := `{
+		"name": "net1",
+		"type": "mynet",
+		"ipam": {"type": "/foo"}
+		"cniVersion": "0.4.0"
+	}`
+
+		args := &skel.CmdArgs{
+			ContainerID: "123456789",
+			Netns:       testNS.Path(),
+			IfName:      "eth0",
+			Args:        fmt.Sprintf("K8S_POD_NAME=%s;K8S_POD_NAMESPACE=%s", fakePod.ObjectMeta.Name, fakePod.ObjectMeta.Namespace),
+			StdinData: []byte(`{
+	    "name": "node-cni-network",
+	    "type": "multus",
+	    "kubeconfig": "/etc/kubernetes/node-kubeconfig.yaml",
+	    "delegates": [{
+	        "name": "weave1",
+	        "cniVersion": "0.4.0",
+	        "type": "weave-net"
+	    }]
+	}`),
+		}
+
+		fExec := &fakeExec{}
+		expectedResult1 := &current.Result{
+			CNIVersion: "0.4.0",
+			IPs: []*current.IPConfig{{
+				Address: *testhelpers.EnsureCIDR("1.1.1.2/24"),
+			},
+			},
+		}
+		expectedConf1 := `{
+	    "name": "weave1",
+	    "cniVersion": "0.4.0",
+	    "type": "weave-net"
+	}`
+		fExec.addPlugin(nil, "eth0", expectedConf1, expectedResult1, nil)
+		fExec.addPlugin(nil, "net1", net1, &current.Result{
+			CNIVersion: "0.4.0",
+			IPs: []*current.IPConfig{{
+				Address: *testhelpers.EnsureCIDR("1.1.1.3/24"),
+			},
+			},
+		}, nil)
+
+		clientInfo := NewFakeClientInfo()
+		_, err := clientInfo.Client.CoreV1().Pods(fakePod.ObjectMeta.Namespace).Create(
+			context.TODO(), fakePod, metav1.CreateOptions{})
+		Expect(err).NotTo(HaveOccurred())
+
+		_, err = clientInfo.AddNetAttachDef(
+			testhelpers.NewFakeNetAttachDef(fakePod.ObjectMeta.Namespace, "net1", net1))
+		Expect(err).NotTo(HaveOccurred())
+
+		os.Setenv("CNI_COMMAND", "ADD")
+		os.Setenv("CNI_IFNAME", "eth0")
+		_, err = CmdAdd(args, fExec, clientInfo)
+		Expect(err).To(HaveOccurred())
+
+	})
+
+	It("validates chained CNI IPAM plugin types", func() {
+		fakePod := testhelpers.NewFakePod("testpod", "net1,net2", "")
+		net1 := `{
+		"name": "net1",
+		"plugins": [
+			{
+				"type": "/mynet"
+			}
+		]
+		"cniVersion": "0.4.0"
+	}`
+
+		args := &skel.CmdArgs{
+			ContainerID: "123456789",
+			Netns:       testNS.Path(),
+			IfName:      "eth0",
+			Args:        fmt.Sprintf("K8S_POD_NAME=%s;K8S_POD_NAMESPACE=%s", fakePod.ObjectMeta.Name, fakePod.ObjectMeta.Namespace),
+			StdinData: []byte(`{
+	    "name": "node-cni-network",
+	    "type": "multus",
+	    "kubeconfig": "/etc/kubernetes/node-kubeconfig.yaml",
+	    "delegates": [{
+	        "name": "weave1",
+	        "cniVersion": "0.4.0",
+	        "type": "weave-net"
+	    }]
+	}`),
+		}
+
+		fExec := &fakeExec{}
+		expectedResult1 := &current.Result{
+			CNIVersion: "0.4.0",
+			IPs: []*current.IPConfig{{
+				Address: *testhelpers.EnsureCIDR("1.1.1.2/24"),
+			},
+			},
+		}
+		expectedConf1 := `{
+	    "name": "weave1",
+	    "cniVersion": "0.4.0",
+	    "type": "weave-net"
+	}`
+		fExec.addPlugin(nil, "eth0", expectedConf1, expectedResult1, nil)
+		fExec.addPlugin(nil, "net1", net1, &current.Result{
+			CNIVersion: "0.4.0",
+			IPs: []*current.IPConfig{{
+				Address: *testhelpers.EnsureCIDR("1.1.1.3/24"),
+			},
+			},
+		}, nil)
+
+		clientInfo := NewFakeClientInfo()
+		_, err := clientInfo.Client.CoreV1().Pods(fakePod.ObjectMeta.Namespace).Create(
+			context.TODO(), fakePod, metav1.CreateOptions{})
+		Expect(err).NotTo(HaveOccurred())
+
+		_, err = clientInfo.AddNetAttachDef(
+			testhelpers.NewFakeNetAttachDef(fakePod.ObjectMeta.Namespace, "net1", net1))
+		Expect(err).NotTo(HaveOccurred())
+
+		os.Setenv("CNI_COMMAND", "ADD")
+		os.Setenv("CNI_IFNAME", "eth0")
+		_, err = CmdAdd(args, fExec, clientInfo)
+		Expect(err).To(HaveOccurred())
+
+	})
+
+	It("validates chained CNI IPAM plugin types", func() {
+		fakePod := testhelpers.NewFakePod("testpod", "net1,net2", "")
+		net1 := `{
+		"name": "net1",
+		"plugins": [
+			{
+				"type": "mynet",
+				"ipam": {"type": "/foo"}
+			}
+		]
+		"cniVersion": "0.4.0"
+	}`
+
+		args := &skel.CmdArgs{
+			ContainerID: "123456789",
+			Netns:       testNS.Path(),
+			IfName:      "eth0",
+			Args:        fmt.Sprintf("K8S_POD_NAME=%s;K8S_POD_NAMESPACE=%s", fakePod.ObjectMeta.Name, fakePod.ObjectMeta.Namespace),
+			StdinData: []byte(`{
+	    "name": "node-cni-network",
+	    "type": "multus",
+	    "kubeconfig": "/etc/kubernetes/node-kubeconfig.yaml",
+	    "delegates": [{
+	        "name": "weave1",
+	        "cniVersion": "0.4.0",
+	        "type": "weave-net"
+	    }]
+	}`),
+		}
+
+		fExec := &fakeExec{}
+		expectedResult1 := &current.Result{
+			CNIVersion: "0.4.0",
+			IPs: []*current.IPConfig{{
+				Address: *testhelpers.EnsureCIDR("1.1.1.2/24"),
+			},
+			},
+		}
+		expectedConf1 := `{
+	    "name": "weave1",
+	    "cniVersion": "0.4.0",
+	    "type": "weave-net"
+	}`
+		fExec.addPlugin(nil, "eth0", expectedConf1, expectedResult1, nil)
+		fExec.addPlugin(nil, "net1", net1, &current.Result{
+			CNIVersion: "0.4.0",
+			IPs: []*current.IPConfig{{
+				Address: *testhelpers.EnsureCIDR("1.1.1.3/24"),
+			},
+			},
+		}, nil)
+
+		clientInfo := NewFakeClientInfo()
+		_, err := clientInfo.Client.CoreV1().Pods(fakePod.ObjectMeta.Namespace).Create(
+			context.TODO(), fakePod, metav1.CreateOptions{})
+		Expect(err).NotTo(HaveOccurred())
+
+		_, err = clientInfo.AddNetAttachDef(
+			testhelpers.NewFakeNetAttachDef(fakePod.ObjectMeta.Namespace, "net1", net1))
+		Expect(err).NotTo(HaveOccurred())
+
+		os.Setenv("CNI_COMMAND", "ADD")
+		os.Setenv("CNI_IFNAME", "eth0")
+		_, err = CmdAdd(args, fExec, clientInfo)
+		Expect(err).To(HaveOccurred())
+
 	})
 
 	It("executes kubernetes networks and delete it after pod removal", func() {
