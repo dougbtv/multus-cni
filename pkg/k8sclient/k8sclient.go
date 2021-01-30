@@ -38,18 +38,19 @@ import (
 	"github.com/containernetworking/cni/libcni"
 	"github.com/containernetworking/cni/pkg/skel"
 	cnitypes "github.com/containernetworking/cni/pkg/types"
-	"gopkg.in/intel/multus-cni.v3/pkg/kubeletclient"
-	"gopkg.in/intel/multus-cni.v3/pkg/logging"
-	"gopkg.in/intel/multus-cni.v3/pkg/types"
 	nettypes "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
 	netclient "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/client/clientset/versioned/typed/k8s.cni.cncf.io/v1"
 	netutils "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/utils"
+	"gopkg.in/intel/multus-cni.v3/pkg/kubeletclient"
+	"gopkg.in/intel/multus-cni.v3/pkg/logging"
+	"gopkg.in/intel/multus-cni.v3/pkg/types"
 )
 
 const (
-	resourceNameAnnot      = "k8s.v1.cni.cncf.io/resourceName"
-	defaultNetAnnot        = "v1.multus-cni.io/default-network"
-	networkAttachmentAnnot = "k8s.v1.cni.cncf.io/networks"
+	resourceNameAnnot               = "k8s.v1.cni.cncf.io/resourceName"
+	defaultNetAnnot                 = "v1.multus-cni.io/default-network"
+	networkAttachmentAnnot          = "k8s.v1.cni.cncf.io/networks"
+	alternateNetworkAttachmentAnnot = "k8s.v1.cni.cncf.io/alternate-networks"
 )
 
 // NoK8sNetworkError indicates error, no network in kubernetes
@@ -437,15 +438,47 @@ func GetPodNetwork(pod *v1.Pod) ([]*types.NetworkSelectionElement, error) {
 	netAnnot := pod.Annotations[networkAttachmentAnnot]
 	defaultNamespace := pod.ObjectMeta.Namespace
 
-	if len(netAnnot) == 0 {
+	var networks []*types.NetworkSelectionElement
+	var err error
+
+	if len(netAnnot) != 0 {
+
+		networks, err = parsePodNetworkAnnotation(netAnnot, defaultNamespace)
+		if err != nil {
+			return nil, err
+		}
+
+	}
+
+	// Now go ahead and check for alternate networks
+	// alternateNetworkAttachmentAnnot
+	alternateNetAnnot := pod.Annotations[alternateNetworkAttachmentAnnot]
+
+	// This is optional, so only do stuff when we have it.
+	if len(alternateNetAnnot) != 0 {
+		alternatenetworks, err := parsePodNetworkAnnotation(alternateNetAnnot, defaultNamespace)
+		if err != nil {
+			return nil, err
+		}
+
+		if len(networks) != 0 {
+			alternatenetworks = append(networks, alternatenetworks...)
+		}
+
+		logging.Debugf("!bang ------------------------------------------------------------------")
+		logging.Debugf("!bang alternatenetworks -- %v", alternatenetworks)
+		logging.Debugf("!bang ------------------------------------------------------------------")
+
+		return alternatenetworks, nil
+
+	}
+
+	if len(networks) == 0 {
 		return nil, &NoK8sNetworkError{"no kubernetes network found"}
 	}
 
-	networks, err := parsePodNetworkAnnotation(netAnnot, defaultNamespace)
-	if err != nil {
-		return nil, err
-	}
 	return networks, nil
+
 }
 
 // GetNetworkDelegates returns delegatenetconf from net-attach-def annotation in pod

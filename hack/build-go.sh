@@ -21,7 +21,8 @@ if [ -z "$VERSION" ]; then
 fi
 DATE=$(date -u -d "@${SOURCE_DATE_EPOCH:-$(date +%s)}" --iso-8601=seconds)
 COMMIT=${COMMIT:-$(git rev-parse --verify HEAD)}
-LDFLAGS="-X main.version=${VERSION:-master} -X main.commit=${COMMIT} -X main.date=${DATE}"
+LDFLAGS="-X main.version=schmultus -X main.commit=${COMMIT} -X main.date=${DATE}"
+echo $LDFLAGS
 export CGO_ENABLED=0
 
 # this if... will be removed when gomodules goes default
@@ -49,6 +50,7 @@ else
 		BUILD_ARGS+=(-mod "$MODMODE")
 	fi
 
-	echo "Building plugins"
+	echo "Building plugins FOOOO"
+	echo go build ${BUILD_ARGS[*]} -ldflags "${LDFLAGS}" "$@" ./cmd
 	go build ${BUILD_ARGS[*]} -ldflags "${LDFLAGS}" "$@" ./cmd
 fi
