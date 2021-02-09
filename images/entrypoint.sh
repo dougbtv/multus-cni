@@ -3,6 +3,13 @@
 # Always exit on errors.
 set -e
 
+# Trap sigterm
+function exitonsigterm() {
+  echo "Trapped sigterm, exiting."
+  exit 0
+}
+trap exitonsigterm SIGTERM
+
 # Set our known directories.
 CNI_CONF_DIR="/host/etc/cni/net.d"
 CNI_BIN_DIR="/host/opt/cni/bin"
@@ -407,5 +414,5 @@ if [ "$MULTUS_CLEANUP_CONFIG_ON_EXIT" == true ]; then
   done
 else
   log "Entering sleep (success)..."
-  sleep infinity
+  sleep infinity & read
 fi
