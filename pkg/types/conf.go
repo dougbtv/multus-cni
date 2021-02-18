@@ -323,6 +323,10 @@ func LoadNetConf(bytes []byte) (*NetConf, error) {
 		netconf.MultusNamespace = defaultMultusNamespace
 	}
 
+	if netconf.DisableAnnotationRead != true {
+		netconf.DisableAnnotationRead = false
+	}
+
 	// setup namespace isolation
 	if netconf.RawNonIsolatedNamespaces == "" {
 		netconf.NonIsolatedNamespaces = []string{defaultNonIsolatedNamespace}

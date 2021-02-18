@@ -38,12 +38,12 @@ import (
 	"github.com/containernetworking/cni/libcni"
 	"github.com/containernetworking/cni/pkg/skel"
 	cnitypes "github.com/containernetworking/cni/pkg/types"
-	"gopkg.in/intel/multus-cni.v3/pkg/kubeletclient"
-	"gopkg.in/intel/multus-cni.v3/pkg/logging"
-	"gopkg.in/intel/multus-cni.v3/pkg/types"
 	nettypes "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
 	netclient "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/client/clientset/versioned/typed/k8s.cni.cncf.io/v1"
 	netutils "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/utils"
+	"gopkg.in/intel/multus-cni.v3/pkg/kubeletclient"
+	"gopkg.in/intel/multus-cni.v3/pkg/logging"
+	"gopkg.in/intel/multus-cni.v3/pkg/types"
 )
 
 const (
@@ -123,6 +123,16 @@ func SetNetworkStatus(client *ClientInfo, k8sArgs *types.K8sArgs, netStatus []ne
 		err = netutils.SetNetworkStatus(client.Client, pod, netStatus)
 		if err != nil {
 			return logging.Errorf("SetNetworkStatus: failed to update the pod %v in out of cluster comm: %v", podName, err)
+		}
+	}
+
+	if conf.DisableAnnotationRead {
+		// Mark that we didn't do anything if we're disabled.
+		pod.Annotations["k8s.v1.cni.cncf.io/multus-annotation-disabled"] = "true"
+		pod = pod.DeepCopy()
+		pod, err = client.Client.CoreV1().Pods(pod.Namespace).UpdateStatus(context.TODO(), pod, metav1.UpdateOptions{})
+		if err != nil {
+			return logging.Errorf("SetNetworkStatus: failed to annotate multus-annotation-disabled on the pod %v in out of cluster comm: %v", podName, err)
 		}
 	}
 
@@ -335,7 +345,7 @@ func TryLoadPodDelegates(pod *v1.Pod, conf *types.NetConf, clientInfo *ClientInf
 		conf.Delegates[0] = delegate
 	}
 
-	networks, err := GetPodNetwork(pod)
+	networks, err := GetPodNetwork(pod, conf)
 	if networks != nil {
 		delegates, err := GetNetworkDelegates(clientInfo, pod, networks, conf, resourceMap)
 
@@ -431,8 +441,14 @@ func GetK8sClient(kubeconfig string, kubeClient *ClientInfo) (*ClientInfo, error
 }
 
 // GetPodNetwork gets net-attach-def annotation from pod
-func GetPodNetwork(pod *v1.Pod) ([]*types.NetworkSelectionElement, error) {
+func GetPodNetwork(pod *v1.Pod, conf *types.NetConf) ([]*types.NetworkSelectionElement, error) {
 	logging.Debugf("GetPodNetwork: %v", pod)
+
+	if conf.DisableAnnotationRead {
+		// Skip all the annotation reads.
+		logging.Debugf("GetPodNetwork: Skipped due to DisableAnnotationRead")
+		return nil, nil
+	}
 
 	netAnnot := pod.Annotations[networkAttachmentAnnot]
 	defaultNamespace := pod.ObjectMeta.Namespace
@@ -584,6 +600,12 @@ func GetDefaultNetworks(pod *v1.Pod, conf *types.NetConf, kubeClient *ClientInfo
 func tryLoadK8sPodDefaultNetwork(kubeClient *ClientInfo, pod *v1.Pod, conf *types.NetConf) (*types.DelegateNetConf, error) {
 	var netAnnot string
 	logging.Debugf("tryLoadK8sPodDefaultNetwork: %v, %v, %v", kubeClient, pod, conf)
+
+	if conf.DisableAnnotationRead {
+		// Skip all the annotation reads.
+		logging.Debugf("tryLoadK8sPodDefaultNetwork: Skipped due to DisableAnnotationRead")
+		return nil, nil
+	}
 
 	netAnnot, ok := pod.Annotations[defaultNetAnnot]
 	if !ok {
