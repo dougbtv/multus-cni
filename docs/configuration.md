@@ -18,7 +18,7 @@ Following is the example of multus config file, in `/etc/cni/net.d/`.
     },    
     "readinessindicatorfile": "",
     "namespaceIsolation": false,
-"Note1":"NOTE: you can set clusterNetwork+defaultNetworks OR delegates!!",
+"Note1":"NOTE: clusterNetwork OR delegates are exclusive!!",
     "clusterNetwork": "defaultCRD",
     "defaultNetworks": ["sidecarCRD", "flannel"],
     "systemNamespaces": ["kube-system", "admin"],

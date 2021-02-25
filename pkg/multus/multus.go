@@ -562,12 +562,19 @@ func CmdAdd(args *skel.CmdArgs, exec invoke.Exec, kubeClient *k8s.ClientInfo) (c
 	var resourceMap map[string]*types.ResourceInfo
 
 	if n.ClusterNetwork != "" {
-		resourceMap, err = k8s.GetDefaultNetworks(pod, n, kubeClient, resourceMap)
+		resourceMap, err = k8s.GetClusterNetwork(pod, n, kubeClient, resourceMap)
 		if err != nil {
 			return nil, cmdErr(k8sArgs, "failed to get clusterNetwork/defaultNetworks: %v", err)
 		}
 		// First delegate is always the master plugin
 		n.Delegates[0].MasterPlugin = true
+	}
+
+	if n.DefaultNetworks != nil {
+		resourceMap, err = k8s.GetDefaultNetworks(pod, n, kubeClient, resourceMap)
+		if err != nil {
+			return nil, cmdErr(k8sArgs, "failed to get clusterNetwork/defaultNetworks: %v", err)
+		}
 	}
 
 	_, kc, err := k8s.TryLoadPodDelegates(pod, n, kubeClient, resourceMap)

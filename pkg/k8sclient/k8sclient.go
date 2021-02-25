@@ -553,9 +553,9 @@ func getNetDelegate(client *ClientInfo, pod *v1.Pod, netname, confdir, namespace
 	return nil, resourceMap, logging.Errorf("getNetDelegate: cannot find network: %v", netname)
 }
 
-// GetDefaultNetworks parses 'defaultNetwork' config, gets network json and put it into netconf.Delegates.
-func GetDefaultNetworks(pod *v1.Pod, conf *types.NetConf, kubeClient *ClientInfo, resourceMap map[string]*types.ResourceInfo) (map[string]*types.ResourceInfo, error) {
-	logging.Debugf("GetDefaultNetworks: %v, %v, %v, %v", pod, conf, kubeClient, resourceMap)
+// GetClusterNetwork parses 'clusterNetwork' config, gets network json and put it into netconf.Delegates.
+func GetClusterNetwork(pod *v1.Pod, conf *types.NetConf, kubeClient *ClientInfo, resourceMap map[string]*types.ResourceInfo) (map[string]*types.ResourceInfo, error) {
+	logging.Debugf("GetClusterNetwork: %v, %v, %v, %v", pod, conf, kubeClient, resourceMap)
 	var delegates []*types.DelegateNetConf
 
 	kubeClient, err := GetK8sClient(conf.Kubeconfig, kubeClient)
@@ -577,6 +577,30 @@ func GetDefaultNetworks(pod *v1.Pod, conf *types.NetConf, kubeClient *ClientInfo
 	}
 	delegate.MasterPlugin = true
 	delegates = append(delegates, delegate)
+
+	if err = conf.AddDelegates(delegates); err != nil {
+		return resourceMap, err
+	}
+
+	return resourceMap, nil
+}
+
+// GetDefaultNetworks parses 'defaultNetwork' config, gets network json and put it into netconf.Delegates.
+func GetDefaultNetworks(pod *v1.Pod, conf *types.NetConf, kubeClient *ClientInfo, resourceMap map[string]*types.ResourceInfo) (map[string]*types.ResourceInfo, error) {
+	logging.Debugf("GetDefaultNetworks: %v, %v, %v, %v", pod, conf, kubeClient, resourceMap)
+	var delegates []*types.DelegateNetConf
+
+	kubeClient, err := GetK8sClient(conf.Kubeconfig, kubeClient)
+	if err != nil {
+		return resourceMap, err
+	}
+	if kubeClient == nil {
+		if len(conf.Delegates) == 0 {
+			// No available kube client and no delegates, we can't do anything
+			return resourceMap, logging.Errorf("GetDefaultNetworks: must have either Kubernetes config or delegates")
+		}
+		return resourceMap, nil
+	}
 
 	// Pod in kube-system namespace does not have default network for now.
 	if !types.CheckSystemNamespaces(pod.ObjectMeta.Namespace, conf.SystemNamespaces) {
