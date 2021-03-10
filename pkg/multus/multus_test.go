@@ -34,11 +34,11 @@ import (
 	cniversion "github.com/containernetworking/cni/pkg/version"
 	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/containernetworking/plugins/pkg/testutils"
+	netfake "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/client/clientset/versioned/fake"
 	"gopkg.in/intel/multus-cni.v3/pkg/k8sclient"
 	"gopkg.in/intel/multus-cni.v3/pkg/logging"
 	testhelpers "gopkg.in/intel/multus-cni.v3/pkg/testing"
 	"gopkg.in/intel/multus-cni.v3/pkg/types"
-	netfake "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/client/clientset/versioned/fake"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
@@ -163,6 +163,8 @@ func (f *fakeExec) ExecPlugin(ctx context.Context, pluginPath string, stdinData 
 	Expect(err).NotTo(HaveOccurred())
 
 	if plugin.expectedConf != "" {
+		fmt.Printf("!bang fExec: %+v", f)
+		fmt.Printf("!bang plugin.expectedConf: %+v", plugin.expectedConf)
 		Expect(writer).To(MatchJSON(plugin.expectedConf))
 	}
 	if plugin.expectedIfname != "" {
@@ -2504,6 +2506,7 @@ var _ = Describe("multus operations cniVersion 0.4.0 config", func() {
 			Netns:       testNS.Path(),
 			IfName:      "eth0",
 			StdinData: []byte(fmt.Sprintf(`{
+				"logLevel": "verbose",
 		    "name": "node-cni-network",
 		    "type": "multus",
 		    "defaultnetworkfile": "/tmp/foo.multus.conf",
@@ -2529,10 +2532,14 @@ var _ = Describe("multus operations cniVersion 0.4.0 config", func() {
 		// This plugin invocation should fail
 		err := fmt.Errorf("expected plugin failure")
 		fExec.addPlugin(nil, "net1", expectedConf2, nil, err)
+		fmt.Printf("!bang ------------------------------------------------ TRACE A\n")
 
 		os.Setenv("CNI_COMMAND", "ADD")
 		os.Setenv("CNI_IFNAME", "eth0")
+		fmt.Printf("!bang ------------------------------------------------ TRACE C\n")
 		_, err = CmdAdd(args, fExec, nil)
+		fmt.Printf("!bang ------------------------------------------------ TRACE D\n")
+		fmt.Printf("!bang ------------------------------------------------ %+v \n", fExec)
 		Expect(fExec.addIndex).To(Equal(2))
 		Expect(fExec.delIndex).To(Equal(2))
 		Expect(err).To(HaveOccurred())

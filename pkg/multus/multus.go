@@ -33,13 +33,13 @@ import (
 	cnicurrent "github.com/containernetworking/cni/pkg/types/current"
 	cniversion "github.com/containernetworking/cni/pkg/version"
 	"github.com/containernetworking/plugins/pkg/ns"
+	nettypes "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
+	nadutils "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/utils"
+	"github.com/vishvananda/netlink"
 	k8s "gopkg.in/intel/multus-cni.v3/pkg/k8sclient"
 	"gopkg.in/intel/multus-cni.v3/pkg/logging"
 	"gopkg.in/intel/multus-cni.v3/pkg/netutils"
 	"gopkg.in/intel/multus-cni.v3/pkg/types"
-	nettypes "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
-	nadutils "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/utils"
-	"github.com/vishvananda/netlink"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -380,6 +380,7 @@ func delegateAdd(exec invoke.Exec, kubeClient *k8s.ClientInfo, pod *v1.Pod, ifNa
 		}
 	} else {
 		// for further debug https://github.com/intel/multus-cni/issues/481
+		logging.Verbosef("!trace !bang -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! NIL POINTER.")
 		logging.Errorf("delegateAdd: pod nil pointer: namespace: %s, name: %s, container id: %s, pod: %v", rt.Args[1][1], rt.Args[2][1], rt.Args[3][1], pod)
 	}
 
@@ -424,13 +425,13 @@ func delegateDel(exec invoke.Exec, pod *v1.Pod, ifName string, delegateConf *typ
 		return logging.Errorf("delegateDel: error setting envionment variable CNI_IFNAME")
 	}
 
+	var confName string
+	if delegateConf.ConfListPlugin {
+		confName = delegateConf.ConfList.Name
+	} else {
+		confName = delegateConf.Conf.Name
+	}
 	if logging.GetLoggingLevel() >= logging.VerboseLevel {
-		var confName string
-		if delegateConf.ConfListPlugin {
-			confName = delegateConf.ConfList.Name
-		} else {
-			confName = delegateConf.Conf.Name
-		}
 		podUID := "unknownUID"
 		if pod != nil {
 			podUID = string(pod.ObjectMeta.UID)
@@ -439,6 +440,10 @@ func delegateDel(exec invoke.Exec, pod *v1.Pod, ifName string, delegateConf *typ
 	}
 
 	var err error
+	if confName == "" {
+		// return logging.Errorf("delegateDel: configuration (of type: ) has an empty name field, cannot look up cache file.")
+		return err
+	}
 	if delegateConf.ConfListPlugin {
 		err = conflistDel(rt, delegateConf.Bytes, binDir, exec)
 		if err != nil {
@@ -615,7 +620,7 @@ func CmdAdd(args *skel.CmdArgs, exec invoke.Exec, kubeClient *k8s.ClientInfo) (c
 			logging.Debugf("Marked interface %v for gateway deletion", ifName)
 		} else {
 			// Otherwise, determine if this interface now gets our default route.
-			// According to 
+			// According to
 			// https://docs.google.com/document/d/1Ny03h6IDVy_e_vmElOqR7UdTPAG_RNydhVE1Kx54kFQ (4.1.2.1.9)
 			// the list can be empty; if it is, we'll assume the CNI's config for the default gateway holds,
 			// else we'll update the defaultgateway to the one specified.
