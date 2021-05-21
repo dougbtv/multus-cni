@@ -10,8 +10,8 @@ import (
 	"gopkg.in/k8snetworkplumbingwg/multus-cni.v3/pkg/logging"
 	"gopkg.in/k8snetworkplumbingwg/multus-cni.v3/pkg/types"
 	v1 "k8s.io/api/core/v1"
+	podresourcesapi "k8s.io/kubelet/pkg/apis/podresources/v1"
 	"k8s.io/kubernetes/pkg/kubelet/apis/podresources"
-	podresourcesapi "k8s.io/kubernetes/pkg/kubelet/apis/podresources/v1alpha1"
 	"k8s.io/kubernetes/pkg/kubelet/util"
 )
 
@@ -41,10 +41,10 @@ func GetResourceClient() (types.ResourceClient, error) {
 func getKubeletClient() (types.ResourceClient, error) {
 	newClient := &kubeletClient{}
 	if kubeletSocket == "" {
-		kubeletSocket = util.LocalEndpoint(defaultPodResourcesPath, podresources.Socket)
+		kubeletSocket, _ = util.LocalEndpoint(defaultPodResourcesPath, podresources.Socket)
 	}
 
-	client, conn, err := podresources.GetClient(kubeletSocket, 10*time.Second, defaultPodResourcesMaxSize)
+	client, conn, err := podresources.GetV1Client(kubeletSocket, 10*time.Second, defaultPodResourcesMaxSize)
 	if err != nil {
 		return nil, logging.Errorf("getKubeletClient: error getting grpc client: %v\n", err)
 	}
