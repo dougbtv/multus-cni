@@ -623,6 +623,7 @@ func CmdAdd(args *skel.CmdArgs, exec invoke.Exec, kubeClient *k8s.ClientInfo) (c
 			netName = delegate.ConfList.Name
 		}
 		tmpResult, err = delegateAdd(exec, kubeClient, pod, delegate, rt, n)
+		console.log("!bang tmpResult: %+v", tmpResult)
 		if err != nil {
 			// If the add failed, tear down all networks we already added
 			// Ignore errors; DEL must be idempotent anyway
