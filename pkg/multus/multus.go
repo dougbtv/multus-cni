@@ -712,6 +712,7 @@ func CmdAdd(args *skel.CmdArgs, exec invoke.Exec, kubeClient *k8s.ClientInfo) (c
 					return nil, cmdErr(k8sArgs, "error setting network status: %v", err)
 				}
 
+				logging.Debugf("!bang: EACH NETSTATUS: %+v", *delegateNetStatus)
 				netStatus = append(netStatus, *delegateNetStatus)
 			}
 		} else if devinfo != nil {
@@ -719,6 +720,8 @@ func CmdAdd(args *skel.CmdArgs, exec invoke.Exec, kubeClient *k8s.ClientInfo) (c
 			logging.Errorf("devinfo available, but no kubeConfig so NetworkStatus not modified.")
 		}
 	}
+
+	logging.Debugf("!bang: COMPLETE NETSTATUS: %+v", netStatus)
 
 	// set the network status annotation in apiserver, only in case Multus as kubeconfig
 	if n.Kubeconfig != "" && kc != nil {
