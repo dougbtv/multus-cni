@@ -38,7 +38,6 @@ import (
 	"runtime"
 	"sync"
 
-	"github.com/containerd/containerd/mount"
 	cnins "github.com/containernetworking/plugins/pkg/ns"
 	"github.com/moby/sys/symlink"
 	"golang.org/x/sys/unix"
@@ -142,7 +141,7 @@ func unmountNS(path string) error {
 	if err != nil {
 		return fmt.Errorf("failed to follow symlink: %w", err)
 	}
-	if err := mount.Unmount(path, unix.MNT_DETACH); err != nil && !os.IsNotExist(err) {
+	if err := Unmount(path, unix.MNT_DETACH); err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("failed to umount netns: %w", err)
 	}
 	if err := os.RemoveAll(path); err != nil {

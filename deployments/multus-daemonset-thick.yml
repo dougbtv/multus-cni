@@ -155,6 +155,7 @@ spec:
       containers:
         - name: kube-multus
           image: docker.io/dougbtv/multus-cni:kni-poc
+          imagePullPolicy: IfNotPresent
           command: [ "/usr/src/multus-cni/bin/multus-daemon" ]
           resources:
             requests:
@@ -174,7 +175,7 @@ spec:
             # e.g. if the cni bin is in '/opt/cni/bin' on the container host side, then it should be mount to '/opt/cni/bin' in multus-daemon,
             # not to any other directory, like '/opt/bin' or '/usr/bin'.
             - name: cnibin
-              mountPath: /opt/cni/bin
+              mountPath: /host/opt/cni/bin
             - name: host-run
               mountPath: /host/run
             - name: host-var-lib-cni-multus

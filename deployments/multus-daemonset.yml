@@ -180,6 +180,7 @@ spec:
       containers:
       - name: kube-multus
         image: ghcr.io/k8snetworkplumbingwg/multus-cni:snapshot
+        imagePullPolicy: IfNotPresent
         command: ["/thin_entrypoint"]
         args:
         - "--multus-conf-file=auto"
@@ -200,10 +201,11 @@ spec:
         - name: cnibin
           mountPath: /host/opt/cni/bin
         - name: multus-cfg
-          mountPath: /tmp/multus-conf
+          mountPath: /host/etc/cni/net.d
       initContainers:
         - name: install-multus-binary
           image: ghcr.io/k8snetworkplumbingwg/multus-cni:snapshot
+          imagePullPolicy: IfNotPresent
           command: ["/install_multus"]
           args:
             - "--type"

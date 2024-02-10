@@ -76,7 +76,14 @@ func main() {
 
 	// Integrate libkni KNIServer initialization here
 	go func() {
-		libkni.NewDefaultKNIServer("/tmp/kni.sock", "unix", libknicni.CreateDefaultConfig())
+		config := libknicni.KNIConfig{
+			IfPrefix: "eth",
+			Db: "net.db",
+			CNIBin: "/host/opt/cni/bin",
+			CNIConf: "/host/etc/cni/net.d",
+		}
+
+		libkni.NewDefaultKNIServer("/tmp/kni.sock", "unix", config)
 	}()
 
 	if multusConf.ReadinessIndicatorFile != "" {
