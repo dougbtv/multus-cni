@@ -78,12 +78,16 @@ func main() {
 	go func() {
 		config := libknicni.KNIConfig{
 			IfPrefix: "eth",
-			Db: "net.db",
-			CNIBin: "/host/opt/cni/bin",
-			CNIConf: "/host/etc/cni/net.d",
+			Db:       "net.db",
+			CNIBin:   "/host/opt/cni/bin",
+			CNIConf:  "/host/etc/cni/net.d",
 		}
 
-		libkni.NewDefaultKNIServer("/tmp/kni.sock", "unix", config)
+		knierr := libkni.NewDefaultKNIServer("/tmp/kni.sock", "unix", config)
+		if knierr != nil {
+			logging.Errorf("failed to start the libkni KNIServer: %v", knierr)
+			// os.Exit(1)
+		}
 	}()
 
 	if multusConf.ReadinessIndicatorFile != "" {

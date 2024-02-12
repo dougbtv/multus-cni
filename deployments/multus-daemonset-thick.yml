@@ -155,7 +155,7 @@ spec:
       containers:
         - name: kube-multus
           image: docker.io/dougbtv/multus-cni:kni-poc
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           command: [ "/usr/src/multus-cni/bin/multus-daemon" ]
           resources:
             requests:
@@ -187,12 +187,12 @@ spec:
             - name: host-run-netns
               mountPath: /run/netns
               mountPropagation: HostToContainer
-            - mountPath: /tmp
-              name: kni
-            - mountPath: /net.db
-              name: varlibcni
-            - mountPath: /var/lib/cni
-              name: cni
+            - name: kni
+              mountPath: /tmp
+            - name: db
+              mountPath: /net.db
+            - name: varlibcni
+              mountPath: /var/lib/cni
             - name: multus-daemon-config
               mountPath: /etc/cni/net.d/multus.d
               readOnly: true
