@@ -7,11 +7,23 @@ ADD . /usr/src/multus-cni
 RUN  cd /usr/src/multus-cni && \
      ./hack/build-go.sh
 
+ARG CNI_PLUGINS_VERSION="v1.3.0"
+ARG CNI_PLUGINS_CLONE_URL="https://github.com/containernetworking/plugins"
+RUN git clone --filter=tree:0 "${CNI_PLUGINS_CLONE_URL}" /cni-plugins 
+WORKDIR /cni-plugins
+RUN cd /cni-plugins \
+    && git checkout "${CNI_PLUGINS_VERSION}" \
+    && CGO_ENABLED=0 ./build_linux.sh && mkdir -p /opt/cni/bin \
+    && cp -a ./bin/. /opt/cni/bin/
+
 FROM debian:stable-slim
 LABEL org.opencontainers.image.source https://github.com/k8snetworkplumbingwg/multus-cni
+RUN mkdir -p /opt/cni/bin
 COPY --from=build /usr/src/multus-cni/bin /usr/src/multus-cni/bin
+COPY --from=build /usr/src/multus-cni/bin /opt/cni/bin
 COPY --from=build /usr/src/multus-cni/LICENSE /usr/src/multus-cni/LICENSE
 COPY --from=build /usr/src/multus-cni/bin/cert-approver /
+COPY --from=build /opt/cni/bin /opt/cni/bin
 WORKDIR /
 
 ENTRYPOINT [ "/usr/src/multus-cni/bin/multus-daemon" ]

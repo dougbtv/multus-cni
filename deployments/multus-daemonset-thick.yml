@@ -156,7 +156,7 @@ spec:
         - name: kube-multus
           image: docker.io/dougbtv/multus-cni:kni-poc
           imagePullPolicy: Always
-          command: [ "/usr/src/multus-cni/bin/multus-daemon" ]
+          command: [ "/bin/bash", "-c", "cp /host/opt/cni/bin/* /opt/cni/bin; /usr/src/multus-cni/bin/multus-daemon" ]
           resources:
             requests:
               cpu: "100m"
@@ -186,7 +186,7 @@ spec:
               mountPath: /run/k8s.cni.cncf.io
             - name: host-run-netns
               mountPath: /run/netns
-              mountPropagation: HostToContainer
+              mountPropagation: Bidirectional
             - name: kni
               mountPath: /tmp
             - name: db
