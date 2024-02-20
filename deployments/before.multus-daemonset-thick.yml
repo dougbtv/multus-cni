@@ -114,7 +114,8 @@ data:
     {
         "chrootDir": "/hostroot",
         "cniVersion": "0.3.1",
-        "logLevel": "debug",
+        "binDir": "/host/opt/cni/bin",
+        "logLevel": "verbose",
         "logFile": "/tmp/multus.log",
         "logToStderr": true,
         "cniConfigDir": "/host/etc/cni/net.d",
@@ -153,6 +154,16 @@ spec:
         - operator: Exists
           effect: NoExecute
       serviceAccountName: multus
+      # initContainers:
+      #   - name: install-cni-bins
+      #     image: docker.io/dougbtv/multus-cni:kni-poc
+      #     imagePullPolicy: Always
+      #     command: [ "/bin/bash", "-c", "cp /cnibin/* /host/opt/cni/bin" ]
+      #     securityContext:
+      #       privileged: true
+      #     volumeMounts:
+      #       - name: cnibin
+      #         mountPath: /host/opt/cni/bin
       containers:
         - name: kube-multus
           image: docker.io/dougbtv/multus-cni:kni-poc

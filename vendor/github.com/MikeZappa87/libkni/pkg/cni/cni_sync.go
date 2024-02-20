@@ -42,6 +42,7 @@ type cniNetConfSyncer struct {
 
 // newCNINetConfSyncer creates cni network conf syncer.
 func newCNINetConfSyncer(confDir string, netPlugin cni.CNI, loadOpts []cni.Opt) (*cniNetConfSyncer, error) {
+	log.Infof("creating cni network conf syncer for %s", confDir)
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create fsnotify watcher: %w", err)
@@ -68,6 +69,8 @@ func newCNINetConfSyncer(confDir string, netPlugin cni.CNI, loadOpts []cni.Opt) 
 		netPlugin: netPlugin,
 		loadOpts:  loadOpts,
 	}
+
+	log.Infof("using syncer to watch cni conf dir: %+v", syncer)
 
 	if err := syncer.netPlugin.Load(syncer.loadOpts...); err != nil {
 		log.WithError(err).Error("failed to load cni during init, please check CRI plugin status before setting up network for pods")
