@@ -204,7 +204,7 @@ func confAdd(rt *libcni.RuntimeConf, rawNetconf []byte, multusNetconf *types.Net
 	binDirs = append([]string{multusNetconf.BinDir}, binDirs...)
 	cniNet := libcni.NewCNIConfigWithCacheDir(binDirs, multusNetconf.CNIDir, exec)
 
-	conf, err := libcni.ConfFromBytes(rawNetconf)
+	conf, err := libcni.NetworkPluginConfFromBytes(rawNetconf)
 	if err != nil {
 		return nil, logging.Errorf("error in converting the raw bytes to conf: %v", err)
 	}
@@ -224,7 +224,7 @@ func confCheck(rt *libcni.RuntimeConf, rawNetconf []byte, multusNetconf *types.N
 	binDirs = append([]string{multusNetconf.BinDir}, binDirs...)
 	cniNet := libcni.NewCNIConfigWithCacheDir(binDirs, multusNetconf.CNIDir, exec)
 
-	conf, err := libcni.ConfFromBytes(rawNetconf)
+	conf, err := libcni.NetworkPluginConfFromBytes(rawNetconf)
 	if err != nil {
 		return logging.Errorf("error in converting the raw bytes to conf: %v", err)
 	}
@@ -244,7 +244,7 @@ func confDel(rt *libcni.RuntimeConf, rawNetconf []byte, multusNetconf *types.Net
 	binDirs = append([]string{multusNetconf.BinDir}, binDirs...)
 	cniNet := libcni.NewCNIConfigWithCacheDir(binDirs, multusNetconf.CNIDir, exec)
 
-	conf, err := libcni.ConfFromBytes(rawNetconf)
+	conf, err := libcni.NetworkPluginConfFromBytes(rawNetconf)
 	if err != nil {
 		return logging.Errorf("error in converting the raw bytes to conf: %v", err)
 	}
@@ -264,7 +264,7 @@ func conflistAdd(rt *libcni.RuntimeConf, rawnetconflist []byte, multusNetconf *t
 	binDirs = append([]string{multusNetconf.BinDir}, binDirs...)
 	cniNet := libcni.NewCNIConfigWithCacheDir(binDirs, multusNetconf.CNIDir, exec)
 
-	confList, err := libcni.ConfListFromBytes(rawnetconflist)
+	confList, err := libcni.NetworkConfFromBytes(rawnetconflist)
 	if err != nil {
 		return nil, logging.Errorf("conflistAdd: error converting the raw bytes into a conflist: %v", err)
 	}
@@ -284,7 +284,7 @@ func conflistCheck(rt *libcni.RuntimeConf, rawnetconflist []byte, multusNetconf 
 	binDirs = append([]string{multusNetconf.BinDir}, binDirs...)
 	cniNet := libcni.NewCNIConfigWithCacheDir(binDirs, multusNetconf.CNIDir, exec)
 
-	confList, err := libcni.ConfListFromBytes(rawnetconflist)
+	confList, err := libcni.NetworkConfFromBytes(rawnetconflist)
 	if err != nil {
 		return logging.Errorf("conflistCheck: error converting the raw bytes into a conflist: %v", err)
 	}
@@ -304,7 +304,7 @@ func conflistDel(rt *libcni.RuntimeConf, rawnetconflist []byte, multusNetconf *t
 	binDirs = append([]string{multusNetconf.BinDir}, binDirs...)
 	cniNet := libcni.NewCNIConfigWithCacheDir(binDirs, multusNetconf.CNIDir, exec)
 
-	confList, err := libcni.ConfListFromBytes(rawnetconflist)
+	confList, err := libcni.NetworkConfFromBytes(rawnetconflist)
 	if err != nil {
 		return logging.Errorf("conflistDel: error converting the raw bytes into a conflist: %v", err)
 	}

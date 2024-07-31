@@ -536,14 +536,19 @@ func getNetDelegate(client *ClientInfo, pod *v1.Pod, netname, confdir, namespace
 				return nil, resourceMap, err
 			}
 		} else {
+			// !bang
 			// option4) if file path (absolute), then load it directly
 			if strings.HasSuffix(netname, ".conflist") {
-				confList, err := libcni.ConfListFromFile(netname)
+				confList, err := libcni.NetworkConfFromFile(netname)
 				if err != nil {
+					logging.Debugf("error loading CNI conflist file %s: %v", netname, err)
 					return nil, resourceMap, logging.Errorf("error loading CNI conflist file %s: %v", netname, err)
 				}
 				configBytes = confList.Bytes
 			} else {
+				// `libcni.ConfFromFile` is deprecated. But, we need it for the time being as it handles non-conflist still,
+				// and updated methods after 1.2.3 don't support this old-school method with non-conflists.
+				// this method doesn't check if there's a 0 length plugins field, that is.
 				conf, err := libcni.ConfFromFile(netname)
 				if err != nil {
 					return nil, resourceMap, logging.Errorf("error loading CNI config file %s: %v", netname, err)
