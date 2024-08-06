@@ -223,16 +223,25 @@ func confDel(rt *libcni.RuntimeConf, rawNetconf []byte, multusNetconf *types.Net
 	return err
 }
 
-func conflistAdd(rt *libcni.RuntimeConf, rawnetconflist []byte, multusNetconf *types.NetConf, exec invoke.Exec) (cnitypes.Result, error) {
+func conflistAdd(rt *libcni.RuntimeConf, rawnetconflist []byte, cniConfList *libcni.NetworkConfigList, multusNetconf *types.NetConf, exec invoke.Exec) (cnitypes.Result, error) {
 	logging.Debugf("conflistAdd: %v, %s", rt, string(rawnetconflist))
 	// In part, adapted from K8s pkg/kubelet/dockershim/network/cni/cni.go
 	binDirs := filepath.SplitList(os.Getenv("CNI_PATH"))
 	binDirs = append([]string{multusNetconf.BinDir}, binDirs...)
 	cniNet := libcni.NewCNIConfigWithCacheDir(binDirs, multusNetconf.CNIDir, exec)
 
-	confList, err := libcni.NetworkConfFromBytes(rawnetconflist)
-	if err != nil {
-		return nil, logging.Errorf("conflistAdd: error converting the raw bytes into a conflist: %v", err)
+	var confList *libcni.NetworkConfigList
+	var err error
+
+	// This may wind up being set during parsing the default network config.
+	// In this case -- we'll use it as passed. Otherwise, we'll recalculate it.
+	if cniConfList != nil {
+		confList = cniConfList
+	} else {
+		confList, err = libcni.NetworkConfFromBytes(rawnetconflist)
+		if err != nil {
+			return nil, logging.Errorf("conflistAdd: error converting the raw bytes into a conflist: %v", err)
+		}
 	}
 
 	result, err := cniNet.AddNetworkList(context.Background(), confList, rt)
@@ -326,7 +335,8 @@ func DelegateAdd(exec invoke.Exec, kubeClient *k8s.ClientInfo, pod *v1.Pod, dele
 	var result cnitypes.Result
 	var err error
 	if delegate.ConfListPlugin {
-		result, err = conflistAdd(rt, delegate.Bytes, multusNetconf, exec)
+		//!bang why are we passing bytes here? don't we have a better representation of it?
+		result, err = conflistAdd(rt, delegate.Bytes, &delegate.CNINetworkConfigList, multusNetconf, exec)
 		if err != nil {
 			return nil, err
 		}
@@ -631,6 +641,7 @@ func CmdAdd(args *skel.CmdArgs, exec invoke.Exec, kubeClient *k8s.ClientInfo) (c
 	var result, tmpResult cnitypes.Result
 	var netStatus []nettypes.NetworkStatus
 	for idx, delegate := range n.Delegates {
+		logging.Verbosef("!bang DEBUG EACH DELEGATE: %+v", delegate)
 		ifName := getIfname(delegate, args.IfName, idx)
 		rt, cniDeviceInfoPath := types.CreateCNIRuntimeConf(args, k8sArgs, ifName, n.RuntimeConfig, delegate)
 		if cniDeviceInfoPath != "" && delegate.ResourceName != "" && delegate.DeviceID != "" {
