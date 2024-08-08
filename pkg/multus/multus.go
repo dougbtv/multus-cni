@@ -269,7 +269,7 @@ func conflistAdd(rt *libcni.RuntimeConf, rawnetconflist []byte, cniConfList *lib
 
 	// This may wind up being set during parsing the default network config.
 	// In this case -- we'll use it as passed. Otherwise, we'll recalculate it.
-	if cniConfList != nil {
+	if len(cniConfList.Plugins) > 0 {
 		confList = cniConfList
 	} else {
 		confList, err = libcni.NetworkConfFromBytes(rawnetconflist)
