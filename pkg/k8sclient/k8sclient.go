@@ -540,7 +540,7 @@ func getNetDelegate(client *ClientInfo, pod *v1.Pod, netname, confdir, namespace
 			// !bang
 			// option4) if file path (absolute), then load it directly
 			if strings.HasSuffix(netname, ".conflist") {
-				confList, err := LibCNIEmulatorNetworkConfFromFileTOO(netname)
+				confList, err := LoadChainedPluginsFromFile(netname)
 				logging.Verbosef("!bang CONFLIST FOR INSPECTION: %#v", confList)
 				if err != nil {
 					logging.Debugf("error loading CNI conflist file %s: %v", netname, err)
@@ -579,99 +579,62 @@ func getNetDelegate(client *ClientInfo, pod *v1.Pod, netname, confdir, namespace
 	return nil, resourceMap, logging.Errorf("getNetDelegate: cannot find network: %v", netname)
 }
 
-func LibCNIEmulatorNetworkConfFromFileTOO(filename string) (*libcni.NetworkConfigList, error) {
-	bytes, err := os.ReadFile(filename)
-	if err != nil {
-		return nil, fmt.Errorf("error reading %s: %w", filename, err)
-	}
-
+func loadSubdirectoryChain(bytes []byte, cniconfdir string) (*libcni.NetworkConfigList, error) {
+	// Load the network configuration from the byte array
 	conf, err := libcni.NetworkConfFromBytes(bytes)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error loading network config from bytes: %v", err)
 	}
 
-	logging.Verbosef("!bang RESULTING CONF: %#v", conf)
-	logging.Verbosef("!bang conf.LoadOnlyInlinedPlugins: %v", conf.LoadOnlyInlinedPlugins)
-
-	if !conf.LoadOnlyInlinedPlugins {
-		logging.Verbosef("!bang CALCULATED FILEPATH: %v", filepath.Dir(filename))
-		plugins, err := libcni.NetworkPluginConfsFromFiles(filepath.Dir(filename), conf.Name)
+	// Check if plugins need to be loaded from files
+	if !conf.LoadOnlyInlinedPlugins && cniconfdir != "" {
+		plugins, err := libcni.NetworkPluginConfsFromFiles(cniconfdir, conf.Name)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("error loading plugin configs: %v", err)
 		}
 		conf.Plugins = append(conf.Plugins, plugins...)
-		logging.Verbosef("!bang PLUGINS NOW: %+v", conf.Plugins)
 	}
 
 	if len(conf.Plugins) == 0 {
 		return nil, fmt.Errorf("no plugin configs found")
 	}
-
-	// TEMPORARILY REMOVED BECAUSE THIS IS KINDA WHACK. !bang
-	/*
-
-		// Reconstruct the Plugins JSON
-		var rawList map[string]interface{}
-		if err := json.Unmarshal(bytes, &rawList); err != nil {
-			return nil, fmt.Errorf("error parsing original JSON: %w", err)
-		}
-
-		// Create a new plugins list with the modified plugins
-		var updatedPlugins []interface{}
-		for _, plugin := range conf.Plugins {
-			var pluginMap map[string]interface{}
-			if err := json.Unmarshal(plugin.Bytes, &pluginMap); err != nil {
-				return nil, fmt.Errorf("error parsing plugin JSON: %w", err)
-			}
-			updatedPlugins = append(updatedPlugins, pluginMap)
-		}
-
-		// Replace the original plugins with the updated plugins
-		rawList["plugins"] = updatedPlugins
-
-		// Marshal the updated JSON back into bytes
-		updatedBytes, err := json.Marshal(rawList)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling updated JSON: %w", err)
-		}
-
-
-		conf.Bytes = updatedBytes
-	*/
 
 	return conf, nil
 }
 
-// LibCNIEmulatorNetworkConfFromFile emulates what libcni is doing.
-func LibCNIEmulatorNetworkConfFromFile(filename string) (*libcni.NetworkConfigList, error) {
+func LoadChainedDelegatesFromBytes(bytes []byte, cniconfdir string) *types.DelegateNetConf {
+	logging.Verbosef("!bang DEBUG CNICONFIGDIR FOR LOAD CHAIN: %s", cniconfdir)
+	conf, err := loadSubdirectoryChain(bytes, cniconfdir)
+	if err != nil {
+		logging.Errorf("LoadChainedDelegatesFromBytes: %v", err)
+		return nil
+	}
+
+	// Create and return a DelegateNetConf from the configuration list
+	delegate, err := types.LoadDelegateNetConfFromConfList(conf, nil, "", "")
+	if err != nil {
+		logging.Errorf("LoadChainedDelegatesFromBytes: error loading delegate network config: %v", err)
+		return nil
+	}
+
+	return delegate
+}
+
+func LoadChainedPluginsFromFile(filename string) (*libcni.NetworkConfigList, error) {
 	bytes, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, fmt.Errorf("error reading %s: %w", filename, err)
 	}
 
-	conf, err := libcni.NetworkConfFromBytes(bytes)
+	conf, err := loadSubdirectoryChain(bytes, filepath.Dir(filename))
 	if err != nil {
 		return nil, err
 	}
 
 	logging.Verbosef("!bang RESULTING CONF: %#v", conf)
 	logging.Verbosef("!bang conf.LoadOnlyInlinedPlugins: %v", conf.LoadOnlyInlinedPlugins)
+	logging.Verbosef("!bang PLUGINS NOW: %+v", conf.Plugins)
 
-	if !conf.LoadOnlyInlinedPlugins {
-		logging.Verbosef("!bang CALCULATED FILEPATH: %v", filepath.Dir(filename))
-		plugins, err := libcni.NetworkPluginConfsFromFiles(filepath.Dir(filename), conf.Name)
-		if err != nil {
-			return nil, err
-		}
-		conf.Plugins = append(conf.Plugins, plugins...)
-		logging.Verbosef("!bang PLUGINS NOW: %+v", conf.Plugins)
-	}
-
-	if len(conf.Plugins) == 0 {
-		// Having 0 plugins for a given network is not necessarily a problem,
-		// but return as error for caller to decide, since they tried to load
-		return nil, fmt.Errorf("no plugin configs found")
-	}
 	return conf, nil
 }
 

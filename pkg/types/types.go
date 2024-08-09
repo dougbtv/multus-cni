@@ -57,6 +57,7 @@ type NetConf struct {
 	NamespaceIsolation       bool     `json:"namespaceIsolation"`
 	RawNonIsolatedNamespaces string   `json:"globalNamespaces"`
 	NonIsolatedNamespaces    []string `json:"-"`
+	AuxiliaryCNIChainName    string   `json:"auxiliaryCNIChainName,omitempty"`
 
 	// Option to set system namespaces (to avoid to add defaultNetworks)
 	SystemNamespaces []string `json:"systemNamespaces"`
