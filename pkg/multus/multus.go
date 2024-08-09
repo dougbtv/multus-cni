@@ -667,6 +667,11 @@ func CmdAdd(args *skel.CmdArgs, exec invoke.Exec, kubeClient *k8s.ClientInfo) (c
 		n.Delegates[0].MasterPlugin = true
 	}
 
+	_, kc, err := k8s.TryLoadPodDelegates(pod, n, kubeClient, resourceMap)
+	if err != nil {
+		return nil, cmdErr(k8sArgs, "error loading k8s delegates k8s args: %v", err)
+	}
+
 	// !bang let's add the auxiliary CNI chain here.
 	if n.AuxiliaryCNIChainName != "" {
 		logging.Verbosef("!bang DEBUG AUX VALUE: %v", n.AuxiliaryCNIChainName)
@@ -683,20 +688,18 @@ func CmdAdd(args *skel.CmdArgs, exec invoke.Exec, kubeClient *k8s.ClientInfo) (c
 		}
 
 		// Get the directory part of the ClusterNetwork path
+		// TODO: This could probably be improved.
 		cniPath := filepath.Dir(n.ClusterNetwork)
 
 		// Load chained delegates
-		// TODO: this "/host" addition is... probably a hack. Where should I be getting this from?
 		delegate := k8s.LoadChainedDelegatesFromBytes(byteArray, cniPath)
 		if delegate != nil {
-			// Add the resulting delegate to n.Delegates
-			n.Delegates = append(n.Delegates, delegate)
+			// Only if additional plugins were listed do we add this aux chain delegate.
+			if len(delegate.ConfList.Plugins) > 1 {
+				// Add the resulting delegate to n.Delegates
+				n.Delegates = append(n.Delegates, delegate)
+			}
 		}
-	}
-
-	_, kc, err := k8s.TryLoadPodDelegates(pod, n, kubeClient, resourceMap)
-	if err != nil {
-		return nil, cmdErr(k8sArgs, "error loading k8s delegates k8s args: %v", err)
 	}
 
 	// cache the multus config
