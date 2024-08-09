@@ -628,6 +628,33 @@ func CmdAdd(args *skel.CmdArgs, exec invoke.Exec, kubeClient *k8s.ClientInfo) (c
 		n.Delegates[0].MasterPlugin = true
 	}
 
+	// !bang let's add the auxiliary CNI chain here.
+	if n.AuxiliaryCNIChainName != "" {
+		logging.Verbosef("!bang DEBUG AUX VALUE: %v", n.AuxiliaryCNIChainName)
+
+		// create an passthru cni conflist configuration with our aux chain cni chain name.
+		jsonString := fmt.Sprintf(`{"cniVersion":"%s","name":"%s","plugins":[{"type":"passthru","name":"passthru-cni"}]}`, n.CNIVersion, n.AuxiliaryCNIChainName)
+
+		// Convert the JSON string to a byte array
+		byteArray := []byte(jsonString)
+
+		// Let's try to get the cni path from the ClusterNetwork
+		if !strings.Contains(n.ClusterNetwork, "/") {
+			return nil, cmdErr(k8sArgs, "auxiliary chain used but ClusterNetwork must be a path, and it is not a path: %v", n.ClusterNetwork)
+		}
+
+		// Get the directory part of the ClusterNetwork path
+		cniPath := filepath.Dir(n.ClusterNetwork)
+
+		// Load chained delegates
+		// TODO: this "/host" addition is... probably a hack. Where should I be getting this from?
+		delegate := k8s.LoadChainedDelegatesFromBytes(byteArray, cniPath)
+		if delegate != nil {
+			// Add the resulting delegate to n.Delegates
+			n.Delegates = append(n.Delegates, delegate)
+		}
+	}
+
 	_, kc, err := k8s.TryLoadPodDelegates(pod, n, kubeClient, resourceMap)
 	if err != nil {
 		return nil, cmdErr(k8sArgs, "error loading k8s delegates k8s args: %v", err)
@@ -642,6 +669,11 @@ func CmdAdd(args *skel.CmdArgs, exec invoke.Exec, kubeClient *k8s.ClientInfo) (c
 	var netStatus []nettypes.NetworkStatus
 	for idx, delegate := range n.Delegates {
 		logging.Verbosef("!bang DEBUG EACH DELEGATE: %+v", delegate)
+		if len(delegate.CNINetworkConfigList.Plugins) > 0 {
+			for _, plugin := range delegate.ConfList.Plugins {
+				logging.Verbosef("!bang EACH DELEGATE PLUGIN: %+v", plugin)
+			}
+		}
 		ifName := getIfname(delegate, args.IfName, idx)
 		rt, cniDeviceInfoPath := types.CreateCNIRuntimeConf(args, k8sArgs, ifName, n.RuntimeConfig, delegate)
 		if cniDeviceInfoPath != "" && delegate.ResourceName != "" && delegate.DeviceID != "" {
