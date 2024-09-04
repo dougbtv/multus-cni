@@ -49,6 +49,7 @@ const (
 	shortPollDuration    = 250 * time.Millisecond
 	informerPollDuration = 50 * time.Millisecond
 	shortPollTimeout     = 2500 * time.Millisecond
+	apiHealthTimeout     = 1 * time.Second
 )
 
 var (
@@ -799,6 +800,7 @@ func CmdCheck(args *skel.CmdArgs, exec invoke.Exec, kubeClient *k8s.ClientInfo) 
 	return nil
 }
 
+// !bang
 // CmdDel ...
 func CmdDel(args *skel.CmdArgs, exec invoke.Exec, kubeClient *k8s.ClientInfo) error {
 	in, err := types.LoadNetConf(args.StdinData)
@@ -833,10 +835,35 @@ func CmdDel(args *skel.CmdArgs, exec invoke.Exec, kubeClient *k8s.ClientInfo) er
 		return cmdErr(nil, "error getting k8s client: %v", err)
 	}
 
-	pod, err := GetPod(kubeClient, k8sArgs, true)
+	// Check API server availability before proceeding
+	var pod *v1.Pod
+
+	// Ensure kubeClient is initialized
+	kubeClient, err = k8s.GetK8sClient(in.Kubeconfig, kubeClient)
 	if err != nil {
-		// GetPod may be failed but just do print error in its log and continue to delete
-		logging.Errorf("Multus: GetPod failed: %v, but continue to delete", err)
+		return cmdErr(nil, "error getting k8s client: %v", err)
+	}
+
+	// Add extra logging and nil checks
+	if kubeClient == nil {
+		return cmdErr(nil, "kubeClient is nil after GetK8sClient")
+	}
+
+	if kubeClient.Client == nil {
+		return cmdErr(nil, "kubeClient.Client is nil, cannot perform API server health check")
+	}
+
+	// Check API server availability using the REST client directly
+	_, err = kubeClient.Client.Discovery().RESTClient().Get().AbsPath("/healthz").Timeout(2 * time.Second).DoRaw(context.TODO())
+	if err != nil {
+		logging.Verbosef("API server unavailable, skipping GetPod and proceeding with delete: %v", err)
+	} else {
+		// !bang
+		pod, err = GetPod(kubeClient, k8sArgs, true)
+		if err != nil {
+			// GetPod may fail, but just log the error and continue to delete
+			logging.Errorf("Multus: GetPod failed: %v, but continuing with delete", err)
+		}
 	}
 
 	// Read the cache to get delegates json for the pod
@@ -924,4 +951,19 @@ func CmdDel(args *skel.CmdArgs, exec invoke.Exec, kubeClient *k8s.ClientInfo) er
 	}
 
 	return e
+}
+
+// CheckAPIServerAvailability checks if the Kubernetes API server is reachable using the healthz endpoint
+func CheckAPIServerAvailability(kubeClient *k8s.ClientInfo) bool {
+	if kubeClient == nil {
+		return false
+	}
+	// Assuming kubeClient.Client gives access to the actual Kubernetes client
+	healthzResponse, err := kubeClient.Client.Discovery().RESTClient().Get().AbsPath("/healthz").Timeout(apiHealthTimeout).DoRaw(context.TODO())
+	if err != nil {
+		logging.Errorf("API server health check failed: %v", err)
+		return false
+	}
+	logging.Debugf("API server healthz response: %s", healthzResponse)
+	return true
 }
