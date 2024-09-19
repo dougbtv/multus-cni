@@ -42,6 +42,10 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
+// SigtermCancelAfter sets the wait time to cancel after sig term
+// TODO: This could be a configuration option
+const SigTermCancelAfter = 10 * time.Second
+
 func main() {
 	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
 
@@ -132,8 +136,7 @@ func main() {
 		for sig := range signalCh {
 			logging.Verbosef("caught %v, stopping...", sig)
 			sigTermCancel()
-			// TODO be configurable
-			<-time.After(10 * time.Second)
+			<-time.After(SigTermCancelAfter)
 			cancel()
 		}
 	}()
