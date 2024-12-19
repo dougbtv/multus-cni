@@ -91,6 +91,11 @@ func (c *ClientInfo) GetPodContext(ctx context.Context, namespace, name string) 
 	return c.Client.CoreV1().Pods(namespace).Get(ctx, name, metav1.GetOptions{})
 }
 
+// GetPodLive does a live API query for the pod, instead of using informers, for cases when a failure occurred, as to prevent a cache miss.
+func (c *ClientInfo) GetPodLive(namespace, name string) (*v1.Pod, error) {
+	return c.Client.CoreV1().Pods(namespace).Get(context.TODO(), name, metav1.GetOptions{})
+}
+
 // DeletePod deletes a pod from kubernetes
 func (c *ClientInfo) DeletePod(namespace, name string) error {
 	return c.Client.CoreV1().Pods(namespace).Delete(context.TODO(), name, metav1.DeleteOptions{})
