@@ -1289,18 +1289,28 @@ var _ = Describe("multus operations cniVersion 1.1.0 config", func() {
 
 		fExec := newFakeExec()
 		expectedConf1 := `{
-			"cni.dev/valid-attachments": [
-			{
-				"containerID": "3f6940ab5ab43bc522569d15b23f8c1bbde1d7678b080398506924fc01d72755",
-				"ifname": "eth0"
-			},
-			{
-				"containerID": "3f6940ab5ab43bc522569d15b23f8c1bbde1d7678b080398506924fc01d72755",
-				"ifname": "net1"
-			}
+			"cni.dev/attachments": [
+				{
+					"containerID": "3f6940ab5ab43bc522569d15b23f8c1bbde1d7678b080398506924fc01d72755",
+					"ifname": "eth0"
+				},
+				{
+					"containerID": "3f6940ab5ab43bc522569d15b23f8c1bbde1d7678b080398506924fc01d72755",
+					"ifname": "net1"
+				}
 			],
-			"name": "weave1",
+			"cni.dev/valid-attachments": [
+				{
+					"containerID": "3f6940ab5ab43bc522569d15b23f8c1bbde1d7678b080398506924fc01d72755",
+					"ifname": "eth0"
+				},
+				{
+					"containerID": "3f6940ab5ab43bc522569d15b23f8c1bbde1d7678b080398506924fc01d72755",
+					"ifname": "net1"
+				}
+			],
 			"cniVersion": "1.1.0",
+			"name": "weave1",
 			"type": "weave-net"
 		}`
 		fExec.addPlugin100(nil, "", expectedConf1, nil, nil)
