@@ -370,7 +370,7 @@ func DelegateAdd(exec invoke.Exec, kubeClient *k8s.ClientInfo, pod *v1.Pod, dele
 	var result cnitypes.Result
 	var err error
 	if delegate.ConfListPlugin {
-		//!bang why are we passing bytes here? don't we have a better representation of it?
+		// TODO: why are we passing bytes here? don't we have a better representation of it?
 		result, err = conflistAdd(rt, delegate.Bytes, &delegate.CNINetworkConfigList, multusNetconf, exec)
 		if err != nil {
 			return nil, err
@@ -685,9 +685,9 @@ func CmdAdd(args *skel.CmdArgs, exec invoke.Exec, kubeClient *k8s.ClientInfo) (c
 		return nil, cmdErr(k8sArgs, "error loading k8s delegates k8s args: %v", err)
 	}
 
-	// !bang let's add the auxiliary CNI chain here.
+	// we add to the auxiliary CNI chain here.
 	if n.AuxiliaryCNIChainName != "" {
-		logging.Verbosef("!bang DEBUG AUX VALUE: %v", n.AuxiliaryCNIChainName)
+		logging.Debugf("Using AuxiliaryCNIChainName: %v", n.AuxiliaryCNIChainName)
 
 		// create an passthru cni conflist configuration with our aux chain cni chain name.
 		jsonString := fmt.Sprintf(`{"cniVersion":"%s","name":"%s","plugins":[{"type":"passthru","name":"passthru-cni"}]}`, n.CNIVersion, n.AuxiliaryCNIChainName)
@@ -723,12 +723,6 @@ func CmdAdd(args *skel.CmdArgs, exec invoke.Exec, kubeClient *k8s.ClientInfo) (c
 	var result, tmpResult cnitypes.Result
 	var netStatus []nettypes.NetworkStatus
 	for idx, delegate := range n.Delegates {
-		logging.Verbosef("!bang DEBUG EACH DELEGATE: %+v", delegate)
-		if len(delegate.CNINetworkConfigList.Plugins) > 0 {
-			for _, plugin := range delegate.ConfList.Plugins {
-				logging.Verbosef("!bang EACH DELEGATE PLUGIN: %+v", plugin)
-			}
-		}
 		ifName := getIfname(delegate, args.IfName, idx)
 		rt, cniDeviceInfoPath := types.CreateCNIRuntimeConf(args, k8sArgs, ifName, n.RuntimeConfig, delegate)
 		if cniDeviceInfoPath != "" && delegate.ResourceName != "" && delegate.DeviceID != "" {

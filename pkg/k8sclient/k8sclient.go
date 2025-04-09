@@ -540,13 +540,11 @@ func getNetDelegate(client *ClientInfo, pod *v1.Pod, netname, confdir, namespace
 			// option4) if file path (absolute), then load it directly
 			if strings.HasSuffix(netname, ".conflist") {
 				confList, err := LoadChainedPluginsFromFile(netname)
-				logging.Verbosef("!bang CONFLIST FOR INSPECTION: %#v", confList)
 				if err != nil {
 					return nil, resourceMap, logging.Errorf("error loading CNI conflist file %s: %v", netname, err)
 				}
 
 				delegate, err := types.LoadDelegateNetConfFromConfList(confList, nil, "", "")
-				logging.Verbosef("!bang DEBUG delegate: %+v", delegate)
 				if err != nil {
 					return nil, resourceMap, err
 				}
@@ -600,7 +598,6 @@ func loadSubdirectoryChain(bytes []byte, cniconfdir string) (*libcni.NetworkConf
 }
 
 func LoadChainedDelegatesFromBytes(bytes []byte, cniconfdir string) *types.DelegateNetConf {
-	logging.Verbosef("!bang DEBUG CNICONFIGDIR FOR LOAD CHAIN: %s", cniconfdir)
 	conf, err := loadSubdirectoryChain(bytes, cniconfdir)
 	if err != nil {
 		logging.Errorf("LoadChainedDelegatesFromBytes: %v", err)
@@ -627,10 +624,6 @@ func LoadChainedPluginsFromFile(filename string) (*libcni.NetworkConfigList, err
 	if err != nil {
 		return nil, err
 	}
-
-	logging.Verbosef("!bang RESULTING CONF: %#v", conf)
-	logging.Verbosef("!bang conf.LoadOnlyInlinedPlugins: %v", conf.LoadOnlyInlinedPlugins)
-	logging.Verbosef("!bang PLUGINS NOW: %+v", conf.Plugins)
 
 	return conf, nil
 }
@@ -674,8 +667,6 @@ func GetDefaultNetworks(pod *v1.Pod, conf *types.NetConf, kubeClient *ClientInfo
 	if err = conf.AddDelegates(delegates); err != nil {
 		return resourceMap, err
 	}
-
-	logging.Verbosef("!bang THE CONFIG: %+v", conf)
 
 	return resourceMap, nil
 }
